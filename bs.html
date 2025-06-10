@@ -1,3 +1,6 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Boccia Scoreboard</title>
@@ -346,6 +349,8 @@
             document.getElementById('red-score').textContent = '0';
             document.getElementById('blue-score').textContent = '0';
             document.getElementById('current-end').textContent = currentEnd;
+            
+            // Reset timers
             timers.red = 240;
             timers.blue = 240;
             document.getElementById('red-timer').textContent = formatTime(timers.red);
@@ -354,15 +359,21 @@
                 clearInterval(timerInterval);
                 activeTimer = null;
             }
-            ballIndex = 0;
-            const balls = document.querySelectorAll('.ball');
-            balls.forEach(ball => ball.className = 'ball');
+            
+            // Reset ball indicators and counters
+            ballIndex = 0; // 從 0 開始，白球也需要計時
+            redBalls = 0;
+            blueBalls = 0;
+            initializeBalls();
+
+            // Reset time timer
             timeTimer = 120;
             if (timeTimerInterval) {
                 clearInterval(timeTimerInterval);
                 timeTimerInterval = null;
             }
             document.getElementById('time-timer').style.display = 'none';
+            document.getElementById('overlay').style.display = 'none';
         }
 
         function nextEnd() {
@@ -374,21 +385,15 @@
                 timers.blue = 240;
                 document.getElementById('red-timer').textContent = formatTime(timers.red);
                 document.getElementById('blue-timer').textContent = formatTime(timers.blue);
+                if (activeTimer) {
+                    clearInterval(timerInterval);
+                    activeTimer = null;
+                }
                 // Reset ball indicators and counters
-                ballIndex = 0;
+                ballIndex = 0; // 從 0 開始，白球也需要計時
                 redBalls = 0;
                 blueBalls = 0;
-                const balls = document.querySelectorAll('.ball');
-                balls.forEach((ball, index) => {
-                    ball.className = 'ball';
-                    if (index === 0) {
-                        ball.style.backgroundColor = 'white';
-                        ball.style.border = '2px solid #ddd';
-                    } else {
-                        ball.style.backgroundColor = '';
-                        ball.style.border = '';
-                    }
-                });
+                initializeBalls();
             } else {
                 alert('Game Over! Final Score:\nRed: ' + scores.red + '\nBlue: ' + scores.blue);
             }
@@ -401,21 +406,33 @@
         let activeTimer = null;
         let timerInterval = null;
         let ballCount = 13;  // Total balls: 1 white + 6 red + 6 blue
-        let ballIndex = 0;
+        let ballIndex = 0;   // 從 0 開始，白球也需要計時
         let redBalls = 0;
         let blueBalls = 0;
 
         // Initialize balls with first one white
-        const ballContainer = document.getElementById('ball-indicators');
-        for (let i = 0; i < ballCount; i++) {
-            const ball = document.createElement('div');
-            ball.className = 'ball';
-            if (i === 0) {
-                ball.style.backgroundColor = 'white';
-                ball.style.border = '2px solid #ddd';
+        function initializeBalls() {
+            const ballContainer = document.getElementById('ball-indicators');
+            ballContainer.innerHTML = ''; // 清空現有球
+            
+            for (let i = 0; i < ballCount; i++) {
+                const ball = document.createElement('div');
+                ball.className = 'ball';
+                if (i === 0) {
+                    // 第一顆球永遠是白色
+                    ball.style.backgroundColor = 'white';
+                    ball.style.border = '2px solid #ddd';
+                } else {
+                    // 其他球重置為預設狀態
+                    ball.style.backgroundColor = 'white';
+                    ball.style.border = '2px solid #ddd';
+                }
+                ballContainer.appendChild(ball);
             }
-            ballContainer.appendChild(ball);
         }
+
+        // 初始化球
+        initializeBalls();
 
         function formatTime(seconds) {
             const mins = Math.floor(seconds / 60);
@@ -438,26 +455,32 @@
                     clearInterval(timerInterval);
                 }
 
-                // Check ball limits before adding new ball
-                if (team === 'red' && redBalls >= 6) {
-                    alert('Maximum red balls reached!');
-                    return;
-                }
-                if (team === 'blue' && blueBalls >= 6) {  // Changed back to 6 for blue team
-                    alert('Maximum blue balls reached!');
-                    return;
-                }
+                // 如果是第一顆球（白球），直接開始計時，不改變顏色
+                if (ballIndex === 0) {
+                    // 白球保持白色，但開始計時
+                    ballIndex++;
+                } else {
+                    // Check ball limits before adding new ball
+                    if (team === 'red' && redBalls >= 6) {
+                        alert('Maximum red balls reached!');
+                        return;
+                    }
+                    if (team === 'blue' && blueBalls >= 6) {
+                        alert('Maximum blue balls reached!');
+                        return;
+                    }
 
-                if (ballIndex < ballCount) {
-                    const balls = document.querySelectorAll('.ball');
-                    if (ballIndex === 0) {
-                        // Skip the first ball as it should always remain white
+                    // 只有在還有球可以使用時才新增球
+                    if (ballIndex < ballCount) {
+                        const balls = document.querySelectorAll('.ball');
+                        balls[ballIndex].className = `ball ${team}`;
+                        balls[ballIndex].style.backgroundColor = team === 'red' ? '#e74c3c' : '#3498db';
+                        balls[ballIndex].style.border = `2px solid ${team === 'red' ? '#e74c3c' : '#3498db'}`;
+                        
+                        if (team === 'red') redBalls++;
+                        if (team === 'blue') blueBalls++;
                         ballIndex++;
                     }
-                    balls[ballIndex].className = `ball ${team}`;
-                    if (team === 'red') redBalls++;
-                    if (team === 'blue') blueBalls++;
-                    ballIndex++;
                 }
 
                 activeTimer = team;
@@ -467,6 +490,7 @@
                         document.getElementById(`${team}-timer`).textContent = formatTime(timers[team]);
                     } else {
                         clearInterval(timerInterval);
+                        activeTimer = null;
                         alert(`${team.charAt(0).toUpperCase() + team.slice(1)} timer finished!`);
                     }
                 }, 1000);
@@ -569,4 +593,5 @@
             }
         }
     </script>
-</body></html>
+</body>
+</html>
