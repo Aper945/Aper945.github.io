@@ -127,12 +127,15 @@
             background: #f8f9fa;
             width: 45%;
             cursor: pointer;
+            transition: all 0.3s ease;
+            border: 3px solid transparent;
         }
 
         .timer-display {
             font-size: 128px;
             font-weight: bold;
             margin: 10px 0;
+            transition: all 0.3s ease;
         }
 
         .timer-controls {
@@ -165,6 +168,98 @@
 
         .timer.red .timer-display { color: #e74c3c; }
         .timer.blue .timer-display { color: #3498db; }
+
+        /* Enhanced timer active states */
+        .timer.active.red {
+            border: 3px solid #e74c3c;
+            background: linear-gradient(135deg, #fdf2f2, #f8f9fa);
+            box-shadow: 0 0 15px rgba(231, 76, 60, 0.3);
+        }
+
+        .timer.active.blue {
+            border: 3px solid #3498db;
+            background: linear-gradient(135deg, #f2f7fd, #f8f9fa);
+            box-shadow: 0 0 15px rgba(52, 152, 219, 0.3);
+        }
+
+        .timer.active.red .timer-display {
+            color: #c0392b;
+            text-shadow: 0 0 10px rgba(231, 76, 60, 0.5);
+        }
+
+        .timer.active.blue .timer-display {
+            color: #2980b9;
+            text-shadow: 0 0 10px rgba(52, 152, 219, 0.5);
+        }
+
+        /* Pulse animation for active timers */
+        @keyframes pulse-red {
+            0% {
+                box-shadow: 0 0 15px rgba(231, 76, 60, 0.3);
+            }
+            50% {
+                box-shadow: 0 0 25px rgba(231, 76, 60, 0.6);
+            }
+            100% {
+                box-shadow: 0 0 15px rgba(231, 76, 60, 0.3);
+            }
+        }
+
+        @keyframes pulse-blue {
+            0% {
+                box-shadow: 0 0 15px rgba(52, 152, 219, 0.3);
+            }
+            50% {
+                box-shadow: 0 0 25px rgba(52, 152, 219, 0.6);
+            }
+            100% {
+                box-shadow: 0 0 15px rgba(52, 152, 219, 0.3);
+            }
+        }
+
+        .timer.active.red {
+            animation: pulse-red 2s infinite;
+        }
+
+        .timer.active.blue {
+            animation: pulse-blue 2s infinite;
+        }
+
+        /* Time warning states */
+        .timer.warning.red {
+            border: 3px solid #f39c12;
+            background: linear-gradient(135deg, #fef9e7, #f8f9fa);
+            animation: pulse-red 1s infinite;
+        }
+
+        .timer.warning.blue {
+            border: 3px solid #f39c12;
+            background: linear-gradient(135deg, #fef9e7, #f8f9fa);
+            animation: pulse-blue 1s infinite;
+        }
+
+        .timer.warning .timer-display {
+            color: #f39c12;
+            text-shadow: 0 0 10px rgba(243, 156, 18, 0.7);
+        }
+
+        /* Critical time states */
+        .timer.critical.red {
+            border: 3px solid #e74c3c;
+            background: linear-gradient(135deg, #fdeded, #f8f9fa);
+            animation: pulse-red 0.5s infinite;
+        }
+
+        .timer.critical.blue {
+            border: 3px solid #e74c3c;
+            background: linear-gradient(135deg, #fdeded, #f8f9fa);
+            animation: pulse-blue 0.5s infinite;
+        }
+
+        .timer.critical .timer-display {
+            color: #e74c3c;
+            text-shadow: 0 0 15px rgba(231, 76, 60, 0.8);
+        }
 
         .fullscreen-btn {
             position: absolute;
@@ -272,14 +367,14 @@
     </button>
     <div class="scoreboard">
         <div class="timer-section">
-            <div class="timer red" onclick="toggleTimer('red')">
+            <div class="timer red" onclick="toggleTimer('red')" id="red-timer-container">
                 <div class="timer-display" id="red-timer">4:00</div>
                 <div class="timer-controls">
                     <button onclick="adjustTimer('red', -1)">-</button>
                     <button onclick="adjustTimer('red', 1)">+</button>
                 </div>
             </div>
-            <div class="timer blue" onclick="toggleTimer('blue')">
+            <div class="timer blue" onclick="toggleTimer('blue')" id="blue-timer-container">
                 <div class="timer-display" id="blue-timer">4:00</div>
                 <div class="timer-controls">
                     <button onclick="adjustTimer('blue', -1)">-</button>
@@ -358,13 +453,14 @@
             if (activeTimer) {
                 clearInterval(timerInterval);
                 activeTimer = null;
+                updateTimerDisplay();
             }
             
             // Reset ball indicators and counters
-            ballIndex = 0; // 從 0 開始，白球也需要計時
+            ballIndex = 0;
             redBalls = 0;
             blueBalls = 0;
-            lastBallColor = null; // 重置上一顆球顏色記錄
+            lastBallColor = null;
             initializeBalls();
 
             // Reset time timer
@@ -389,12 +485,13 @@
                 if (activeTimer) {
                     clearInterval(timerInterval);
                     activeTimer = null;
+                    updateTimerDisplay();
                 }
                 // Reset ball indicators and counters
-                ballIndex = 0; // 從 0 開始，白球也需要計時
+                ballIndex = 0;
                 redBalls = 0;
                 blueBalls = 0;
-                lastBallColor = null; // 重置上一顆球顏色記錄
+                lastBallColor = null;
                 initializeBalls();
             } else {
                 alert('Game Over! Final Score:\nRed: ' + scores.red + '\nBlue: ' + scores.blue);
@@ -407,26 +504,50 @@
         };
         let activeTimer = null;
         let timerInterval = null;
-        let ballCount = 13;  // Total balls: 1 white + 6 red + 6 blue
-        let ballIndex = 0;   // 從 0 開始，白球也需要計時
+        let ballCount = 13;
+        let ballIndex = 0;
         let redBalls = 0;
         let blueBalls = 0;
-        let lastBallColor = null; // 記錄上一顆球的顏色
+        let lastBallColor = null;
 
-        // Initialize balls with first one white
+        // Function to update timer visual states
+        function updateTimerDisplay() {
+            const redContainer = document.getElementById('red-timer-container');
+            const blueContainer = document.getElementById('blue-timer-container');
+            
+            // Reset all classes
+            redContainer.className = 'timer red';
+            blueContainer.className = 'timer blue';
+            
+            // Add active state to the running timer
+            if (activeTimer === 'red') {
+                redContainer.classList.add('active');
+                if (timers.red <= 30) {
+                    redContainer.classList.add('critical');
+                } else if (timers.red <= 60) {
+                    redContainer.classList.add('warning');
+                }
+            } else if (activeTimer === 'blue') {
+                blueContainer.classList.add('active');
+                if (timers.blue <= 30) {
+                    blueContainer.classList.add('critical');
+                } else if (timers.blue <= 60) {
+                    blueContainer.classList.add('warning');
+                }
+            }
+        }
+
         function initializeBalls() {
             const ballContainer = document.getElementById('ball-indicators');
-            ballContainer.innerHTML = ''; // 清空現有球
+            ballContainer.innerHTML = '';
             
             for (let i = 0; i < ballCount; i++) {
                 const ball = document.createElement('div');
                 ball.className = 'ball';
                 if (i === 0) {
-                    // 第一顆球永遠是白色
                     ball.style.backgroundColor = 'white';
                     ball.style.border = '2px solid #ddd';
                 } else {
-                    // 其他球重置為預設狀態
                     ball.style.backgroundColor = 'white';
                     ball.style.border = '2px solid #ddd';
                 }
@@ -434,7 +555,6 @@
             }
         }
 
-        // 初始化球
         initializeBalls();
 
         function formatTime(seconds) {
@@ -447,24 +567,23 @@
             event.stopPropagation();
             timers[team] = Math.max(0, Math.min(360, timers[team] + change));
             document.getElementById(`${team}-timer`).textContent = formatTime(timers[team]);
+            updateTimerDisplay();
         }
 
         function toggleTimer(team) {
             if (activeTimer === team) {
                 clearInterval(timerInterval);
                 activeTimer = null;
+                updateTimerDisplay();
             } else {
                 if (activeTimer) {
                     clearInterval(timerInterval);
                 }
 
-                // 如果是第一顆球（白球），直接開始計時，不改變顏色
                 if (ballIndex === 0) {
-                    // 白球保持白色，但開始計時
                     ballIndex++;
-                    lastBallColor = 'white'; // 記錄白球
+                    lastBallColor = 'white';
                 } else {
-                    // 檢查第二顆和第三顆球的連續顏色限制
                     if (ballIndex === 1 || ballIndex === 2) {
                         if (lastBallColor === team) {
                             alert('第二顆和第三顆球不能是連續相同的顏色！');
@@ -472,7 +591,6 @@
                         }
                     }
 
-                    // Check ball limits before adding new ball
                     if (team === 'red' && redBalls >= 6) {
                         alert('Maximum red balls reached!');
                         return;
@@ -482,7 +600,6 @@
                         return;
                     }
 
-                    // 只有在還有球可以使用時才新增球
                     if (ballIndex < ballCount) {
                         const balls = document.querySelectorAll('.ball');
                         balls[ballIndex].className = `ball ${team}`;
@@ -491,26 +608,30 @@
                         
                         if (team === 'red') redBalls++;
                         if (team === 'blue') blueBalls++;
-                        lastBallColor = team; // 記錄當前球的顏色
+                        lastBallColor = team;
                         ballIndex++;
                     }
                 }
 
                 activeTimer = team;
+                updateTimerDisplay();
+                
                 timerInterval = setInterval(() => {
                     if (timers[team] > 0) {
                         timers[team]--;
                         document.getElementById(`${team}-timer`).textContent = formatTime(timers[team]);
+                        updateTimerDisplay();
                     } else {
                         clearInterval(timerInterval);
                         activeTimer = null;
+                        updateTimerDisplay();
                         alert(`${team.charAt(0).toUpperCase() + team.slice(1)} timer finished!`);
                     }
                 }, 1000);
             }
         }
 
-        let timeTimer = 120; // 2 minutes in seconds
+        let timeTimer = 120;
         let timeTimerInterval = null;
 
         function toggleTimeTimer() {
