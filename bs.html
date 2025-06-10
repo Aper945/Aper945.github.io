@@ -23,6 +23,8 @@
             width: 90%;
             max-width: 800px;
             position: relative;
+            display: flex;
+            flex-direction: column;
         }
 
         .teams {
@@ -330,31 +332,201 @@
         }
 
         @media (max-width: 768px) {
-            .timer-display {
-                font-size: 72px;
-            }
-
-            .score {
-                font-size: 96px;
-            }
-
-            .teams {
-                flex-direction: column;
-                gap: 10px;
-            }
-
-            .timer-section {
-                flex-direction: column;
-                gap: 10px;
+            body {
+                padding: 10px;
+                min-height: auto;
+                align-items: flex-start;
             }
 
             .scoreboard {
                 padding: 10px;
+                width: 100%;
+                max-width: none;
+                margin: 0;
+            }
+
+            .timer-section {
+                flex-direction: column;
+                gap: 15px;
+                margin-bottom: 15px;
+            }
+
+            .timer {
+                width: 100%;
+                padding: 10px;
+            }
+
+            .timer-display {
+                font-size: 64px;
+                margin: 5px 0;
+            }
+
+            .timer-controls {
+                gap: 15px;
+            }
+
+            .timer-controls button {
+                padding: 8px 16px;
+                font-size: 16px;
+            }
+
+            .teams {
+                flex-direction: column;
+                gap: 15px;
+                margin-bottom: 15px;
+            }
+
+            .team {
+                padding: 10px 5px;
+            }
+
+            .team h2 {
+                margin: 0 0 10px 0;
+                font-size: 24px;
+            }
+
+            .score {
+                font-size: 72px;
+                margin: 5px 0;
+            }
+
+            .score-controls {
+                gap: 10px;
+            }
+
+            .score-controls button {
+                padding: 8px 16px;
+                font-size: 16px;
+                min-width: 40px;
+            }
+
+            .ends-display {
+                position: static;
+                transform: none;
+                margin: 15px 0;
+                order: -1;
+            }
+
+            .current-end {
+                font-size: 36px;
+            }
+
+            .end-controls {
+                flex-wrap: wrap;
+                gap: 8px;
+                margin-top: 15px;
+            }
+
+            .end-controls button {
+                padding: 12px 16px;
+                font-size: 14px;
+                margin: 0;
+                flex: 1;
+                min-width: 100px;
+            }
+
+            .ball-indicators {
+                padding: 8px;
+                gap: 8px;
+                margin-top: 15px;
             }
 
             .ball {
                 width: 15px;
                 height: 15px;
+            }
+
+            .fullscreen-btn {
+                top: 5px;
+                right: 5px;
+                padding: 8px;
+            }
+
+            .fullscreen-btn svg {
+                width: 20px;
+                height: 20px;
+            }
+
+            .modal {
+                width: 90%;
+                min-width: auto;
+                padding: 20px;
+                margin: 20px;
+            }
+
+            .modal button {
+                font-size: 32px;
+                padding: 15px;
+            }
+
+            .time-display {
+                font-size: 128px;
+                padding: 20px;
+                width: 90%;
+                max-width: none;
+                box-sizing: border-box;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .timer-display {
+                font-size: 48px;
+            }
+
+            .score {
+                font-size: 56px;
+            }
+
+            .current-end {
+                font-size: 28px;
+            }
+
+            .team h2 {
+                font-size: 20px;
+            }
+
+            .end-controls {
+                flex-direction: column;
+            }
+
+            .end-controls button {
+                width: 100%;
+            }
+
+            .time-display {
+                font-size: 96px;
+                padding: 15px;
+            }
+
+            .modal button {
+                font-size: 24px;
+                padding: 12px;
+            }
+        }
+
+        @media (orientation: landscape) and (max-height: 600px) {
+            .timer-display {
+                font-size: 48px;
+            }
+
+            .score {
+                font-size: 64px;
+            }
+
+            .current-end {
+                font-size: 32px;
+            }
+
+            .scoreboard {
+                padding: 8px;
+            }
+
+            .timer {
+                padding: 8px;
+            }
+
+            .team {
+                padding: 8px 5px;
             }
         }
     </style>
