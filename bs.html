@@ -364,6 +364,7 @@
             ballIndex = 0; // 從 0 開始，白球也需要計時
             redBalls = 0;
             blueBalls = 0;
+            lastBallColor = null; // 重置上一顆球顏色記錄
             initializeBalls();
 
             // Reset time timer
@@ -393,6 +394,7 @@
                 ballIndex = 0; // 從 0 開始，白球也需要計時
                 redBalls = 0;
                 blueBalls = 0;
+                lastBallColor = null; // 重置上一顆球顏色記錄
                 initializeBalls();
             } else {
                 alert('Game Over! Final Score:\nRed: ' + scores.red + '\nBlue: ' + scores.blue);
@@ -409,6 +411,7 @@
         let ballIndex = 0;   // 從 0 開始，白球也需要計時
         let redBalls = 0;
         let blueBalls = 0;
+        let lastBallColor = null; // 記錄上一顆球的顏色
 
         // Initialize balls with first one white
         function initializeBalls() {
@@ -459,7 +462,16 @@
                 if (ballIndex === 0) {
                     // 白球保持白色，但開始計時
                     ballIndex++;
+                    lastBallColor = 'white'; // 記錄白球
                 } else {
+                    // 檢查第二顆和第三顆球的連續顏色限制
+                    if (ballIndex === 1 || ballIndex === 2) {
+                        if (lastBallColor === team) {
+                            alert('第二顆和第三顆球不能是連續相同的顏色！');
+                            return;
+                        }
+                    }
+
                     // Check ball limits before adding new ball
                     if (team === 'red' && redBalls >= 6) {
                         alert('Maximum red balls reached!');
@@ -479,6 +491,7 @@
                         
                         if (team === 'red') redBalls++;
                         if (team === 'blue') blueBalls++;
+                        lastBallColor = team; // 記錄當前球的顏色
                         ballIndex++;
                     }
                 }
