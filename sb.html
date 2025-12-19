@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>氣球排球智慧記分板</title>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* 避免 iOS Safari 點擊延遲與選取閃爍 */
+        button {
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+        /* 禁止選取文字，避免連點時誤選 */
+        .no-select {
+            user-select: none;
+            -webkit-user-select: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-900 text-white font-sans p-2 md:p-4 lg:p-6 flex flex-col items-center justify-start">
+
+    <!-- 標題列 -->
+    <div class="w-full max-w-[1800px] flex justify-end items-center mb-4 px-2">
+        <button onclick="toggleModal('rules-modal', true)" class="bg-slate-800 p-3 rounded-xl text-slate-400 hover:text-white transition shadow-lg active:scale-95">
+            <i data-lucide="info"></i>
+        </button>
+    </div>
+
+    <!-- 主內容 Grid -->
+    <!-- 修改 max-w 為全寬，並在 lg 尺寸使用 grid-cols-12 -->
+    <div class="w-full max-w-[1800px] grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 relative items-stretch">
+
+        <!-- Team A 卡片 -->
+        <!-- 增加 h-full 與 flex 佈局，讓卡片高度自動延展對齊中間 -->
+        <div id="teamA-card" class="lg:col-span-4 bg-slate-800 rounded-3xl p-4 md:p-6 border-b-8 transition-all duration-500 border-slate-700 opacity-60 flex flex-col justify-between h-full shadow-lg">
+            <div>
+                <input 
+                    type="text" 
+                    id="teamA-name" 
+                    class="bg-transparent text-center w-full text-3xl md:text-4xl font-bold mb-4 focus:outline-none focus:border-b focus:border-pink-500 py-2"
+                    value="隊伍 A"
+                    oninput="updateTeamName('A', this.value)"
+                >
+            </div>
+            
+            <div class="text-center flex-grow flex flex-col justify-center my-4">
+                <div id="teamA-score" class="text-[25vw] md:text-9xl lg:text-[10rem] xl:text-[12rem] font-black tabular-nums text-pink-500 leading-none drop-shadow-2xl tracking-tighter no-select">0</div>
+            </div>
+            
+            <div class="flex flex-col gap-4">
+                <div class="flex gap-3">
+                    <button onclick="adjustScore('A', -1)" class="flex-1 bg-slate-700 p-4 md:p-6 rounded-2xl hover:bg-slate-600 active:scale-95 transition text-white shadow-md">
+                        <i data-lucide="minus" class="mx-auto w-6 h-6 md:w-8 md:h-8"></i>
+                    </button>
+                    <button onclick="scorePoint('A')" class="flex-[2] bg-pink-600 p-4 md:p-6 rounded-2xl shadow-xl active:scale-95 transition font-bold text-xl md:text-2xl hover:bg-pink-500 disabled:opacity-50 text-white" id="btn-score-A">
+                        A 隊得分
+                    </button>
+                </div>
+                <div id="teamA-status" class="p-3 md:p-4 rounded-2xl text-center transition-all bg-slate-900/50 text-slate-500 text-lg font-medium">
+                    接球方
+                </div>
+            </div>
+        </div>
+
+        <!-- 中間控制區 -->
+        <div class="lg:col-span-4 flex flex-col gap-4 h-full">
+            
+            <!-- 發球狀態顯示 -->
+            <div class="bg-slate-800 rounded-3xl p-5 border border-slate-700 shadow-xl text-center min-h-[160px] md:min-h-[200px] flex flex-col justify-center flex-grow">
+                <!-- 尚未開始時顯示選擇按鈕 -->
+                <div id="server-select-ui">
+                    <p class="text-slate-400 mb-4 font-bold text-base md:text-lg uppercase tracking-wide">選擇首位發球隊伍</p>
+                    <div class="flex gap-4 justify-center">
+                        <button onclick="setInitialServer('A')" class="bg-pink-600 px-8 py-4 rounded-xl font-bold text-xl hover:bg-pink-500 transition shadow-lg text-white active:scale-95">A 隊</button>
+                        <button onclick="setInitialServer('B')" class="bg-sky-600 px-8 py-4 rounded-xl font-bold text-xl hover:bg-sky-500 transition shadow-lg text-white active:scale-95">B 隊</button>
+                    </div>
+                </div>
+
+                <!-- 開始後顯示發球資訊 -->
+                <div id="server-info-ui" class="hidden space-y-2 md:space-y-4">
+                    <span class="text-slate-400 text-xs md:text-sm font-bold tracking-widest uppercase">當前發球指示</span>
+                    <div class="flex items-center justify-center gap-2 md:gap-4 flex-wrap">
+                        <div id="indicator-A" class="text-lg md:text-xl font-black px-4 py-2 rounded-xl transition-colors bg-slate-700 text-slate-500 truncate max-w-[120px] md:max-w-none">隊伍 A</div>
+                        <i data-lucide="arrow-right" class="text-amber-500 animate-pulse w-6 h-6 md:w-8 md:h-8"></i>
+                        <div id="indicator-B" class="text-lg md:text-xl font-black px-4 py-2 rounded-xl transition-colors bg-slate-700 text-slate-500 truncate max-w-[120px] md:max-w-none">隊伍 B</div>
+                    </div>
+                    <div class="py-2">
+                        <div class="text-5xl md:text-7xl font-black text-amber-500 inline-block">
+                            <span id="server-number">1</span>
+                        </div>
+                        <span class="text-2xl md:text-3xl font-bold text-amber-500/80 ml-2">號發球</span>
+                    </div>
+                    <div class="flex justify-center items-center gap-6 pt-3 border-t border-slate-700/50">
+                        <button onclick="adjustServerNo(-1)" class="text-slate-500 hover:text-white p-2"><i data-lucide="minus" width="24" height="24"></i></button>
+                        <span class="text-[10px] md:text-xs text-slate-500 uppercase tracking-tighter">手動校正號碼</span>
+                        <button onclick="adjustServerNo(1)" class="text-slate-500 hover:text-white p-2"><i data-lucide="plus" width="24" height="24"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 計時器 -->
+            <div id="timer-card" class="bg-slate-800 rounded-3xl p-6 shadow-xl border-t-4 transition-all border-blue-500 flex flex-col justify-center min-h-[160px]">
+                <div class="text-center">
+                    <span id="timer-display" class="text-6xl md:text-8xl font-mono font-bold leading-none text-blue-400 tracking-tight no-select">15:00</span>
+                </div>
+                <div id="timer-controls" class="flex justify-center gap-6 mt-4 md:mt-6">
+                    <button onclick="toggleTimer()" id="btn-play-pause" class="p-4 md:p-5 rounded-full shadow-lg active:scale-90 transition transform bg-emerald-600 hover:bg-emerald-500 text-white">
+                        <i data-lucide="play" class="ml-1 fill-white w-8 h-8 md:w-10 md:h-10"></i>
+                    </button>
+                    <button onclick="resetTimer()" class="p-4 md:p-5 bg-slate-700 rounded-full text-slate-300 hover:bg-slate-600 hover:text-white active:scale-90 transition">
+                        <i data-lucide="rotate-ccw" class="w-8 h-8 md:w-10 md:h-10"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 警告與操作按鈕 -->
+            <div class="flex-grow flex flex-col justify-end gap-3">
+                <div id="warning-msg" class="hidden bg-red-900/40 border border-red-500 p-3 rounded-xl flex items-center justify-center gap-2 text-sm md:text-base text-white animate-pulse">
+                    <i data-lucide="alert-triangle" class="text-red-500 flex-shrink-0" width="20"></i>
+                    <span>最後 5 分鐘禁停、禁換人</span>
+                </div>
+
+                <div id="game-active-btns" class="grid grid-cols-2 gap-3 h-full">
+                    <button onclick="toggleModal('reset-confirm-modal', true)" class="py-4 bg-slate-800 text-slate-400 border border-slate-700 rounded-2xl hover:bg-slate-700 transition flex items-center justify-center gap-2 font-medium text-base md:text-lg">
+                        <i data-lucide="rotate-cw" width="18"></i> 重置本局
+                    </button>
+                    <button onclick="endMatch()" class="py-4 bg-red-600/20 text-red-400 border border-red-600/30 rounded-2xl hover:bg-red-600 hover:text-white transition flex items-center justify-center gap-2 font-bold text-base md:text-lg">
+                        <i data-lucide="x-circle" width="18"></i> 結束比賽
+                    </button>
+                </div>
+                
+                <button id="new-game-btn" onclick="performReset()" class="hidden w-full py-6 bg-blue-600 text-white rounded-2xl shadow-lg hover:bg-blue-500 transition flex items-center justify-center gap-3 font-bold text-2xl animate-pulse">
+                    <i data-lucide="rotate-ccw" width="32"></i> 開始新比賽
+                </button>
+            </div>
+        </div>
+
+        <!-- Team B 卡片 -->
+        <!-- 增加 h-full 與 flex 佈局 -->
+        <div id="teamB-card" class="lg:col-span-4 bg-slate-800 rounded-3xl p-4 md:p-6 border-b-8 transition-all duration-500 border-slate-700 opacity-60 flex flex-col justify-between h-full shadow-lg">
+            <div>
+                <input 
+                    type="text" 
+                    id="teamB-name" 
+                    class="bg-transparent text-center w-full text-3xl md:text-4xl font-bold mb-4 focus:outline-none focus:border-b focus:border-sky-500 py-2"
+                    value="隊伍 B"
+                    oninput="updateTeamName('B', this.value)"
+                >
+            </div>
+            
+            <div class="text-center flex-grow flex flex-col justify-center my-4">
+                <div id="teamB-score" class="text-[25vw] md:text-9xl lg:text-[10rem] xl:text-[12rem] font-black tabular-nums text-sky-500 leading-none drop-shadow-2xl tracking-tighter no-select">0</div>
+            </div>
+            
+            <div class="flex flex-col gap-4">
+                <div class="flex gap-3">
+                    <button onclick="adjustScore('B', -1)" class="flex-1 bg-slate-700 p-4 md:p-6 rounded-2xl hover:bg-slate-600 active:scale-95 transition text-white shadow-md">
+                        <i data-lucide="minus" class="mx-auto w-6 h-6 md:w-8 md:h-8"></i>
+                    </button>
+                    <button onclick="scorePoint('B')" class="flex-[2] bg-sky-600 p-4 md:p-6 rounded-2xl shadow-xl active:scale-95 transition font-bold text-xl md:text-2xl hover:bg-sky-500 disabled:opacity-50 text-white" id="btn-score-B">
+                        B 隊得分
+                    </button>
+                </div>
+                <div id="teamB-status" class="p-3 md:p-4 rounded-2xl text-center transition-all bg-slate-900/50 text-slate-500 text-lg font-medium">
+                    接球方
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Modals -->
+
+    <!-- 重置確認 Modal -->
+    <div id="reset-confirm-modal" class="hidden fixed inset-0 z-[120] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-700 p-8 rounded-3xl max-w-sm w-full text-center shadow-2xl">
+            <h3 class="text-2xl font-bold mb-4 text-amber-500">確定要重置比賽嗎？</h3>
+            <p class="text-slate-300 text-base mb-8">目前的比分與時間將會被清空。</p>
+            <div class="flex gap-4">
+                <button onclick="toggleModal('reset-confirm-modal', false)" class="flex-1 py-4 bg-slate-700 rounded-2xl font-bold hover:bg-slate-600 text-lg">取消</button>
+                <button onclick="performReset()" class="flex-1 py-4 bg-red-600 rounded-2xl font-bold hover:bg-red-500 text-lg">確定重置</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 規則 Modal -->
+    <div id="rules-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-[130] overflow-y-auto" onclick="toggleModal('rules-modal', false)">
+        <div class="bg-slate-800 p-8 rounded-3xl max-w-lg w-full border border-slate-700" onclick="event.stopPropagation()">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-blue-400 font-sans">發球與完賽規則</h2>
+                <button onclick="toggleModal('rules-modal', false)" class="text-slate-500 hover:text-white transition"><i data-lucide="x-circle" width="32" height="32"></i></button>
+            </div>
+            <div class="space-y-6 text-slate-200 text-base leading-relaxed">
+                <div class="bg-slate-900/50 p-6 rounded-2xl border border-slate-700">
+                    <p class="text-amber-400 font-bold mb-2 flex items-center gap-2 text-lg"><i data-lucide="arrow-right" width="20"></i> 得分即換發：</p>
+                    <p>每球結束皆交換發球權。順序：A1 ➔ B1 ➔ A2 ➔ B2 ... ➔ B6 ➔ A1。</p>
+                </div>
+                <div class="bg-slate-900/50 p-6 rounded-2xl border border-slate-700">
+                    <p class="text-blue-400 font-bold mb-2 flex items-center gap-2 text-lg"><i data-lucide="check-circle-2" width="20"></i> 完賽判定：</p>
+                    <p>時間到或點擊「結束比賽」後，分數高者獲勝。若分數相同則顯示平手。</p>
+                </div>
+            </div>
+            <button onclick="toggleModal('rules-modal', false)" class="mt-8 w-full bg-slate-700 hover:bg-slate-600 py-4 rounded-2xl font-bold transition text-lg">我知道了</button>
+        </div>
+    </div>
+
+    <!-- 比賽結束 Overlay -->
+    <div id="game-over-modal" class="hidden fixed inset-0 z-[100] bg-slate-900/90 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-slate-800 border-2 border-slate-700 p-8 md:p-12 rounded-[3rem] shadow-2xl max-w-2xl w-full text-center relative overflow-hidden my-auto">
+            <div class="absolute top-0 left-0 w-full h-3 bg-gradient-to-r from-pink-500 via-amber-500 to-sky-500"></div>
+            
+            <div class="mb-8 flex justify-center">
+                <div class="p-6 bg-amber-500/20 rounded-full">
+                    <i data-lucide="trophy" class="text-amber-500" width="80" height="80"></i>
+                </div>
+            </div>
+
+            <h2 class="text-4xl font-black text-slate-400 mb-4 uppercase tracking-widest">比賽結果</h2>
+            
+            <div class="flex items-center justify-center gap-4 md:gap-12 my-10">
+                <div class="text-center">
+                    <p id="result-teamA-name" class="text-slate-500 text-lg mb-2">隊伍 A</p>
+                    <p id="result-teamA-score" class="text-7xl md:text-8xl font-black text-pink-500">0</p>
+                </div>
+                <div class="text-5xl font-black text-slate-600 self-center">:</div>
+                <div class="text-center">
+                    <p id="result-teamB-name" class="text-slate-500 text-lg mb-2">隊伍 B</p>
+                    <p id="result-teamB-score" class="text-7xl md:text-8xl font-black text-sky-500">0</p>
+                </div>
+            </div>
+
+            <div id="result-winner-text" class="text-5xl md:text-6xl font-black mb-10 leading-tight">
+                <!-- 獲勝者文字 -->
+            </div>
+
+            <button onclick="performReset()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-6 rounded-3xl text-3xl transition-all shadow-xl active:scale-95 flex items-center justify-center gap-4">
+                <i data-lucide="rotate-ccw" width="36"></i> 準備下一場比賽
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- 狀態管理 (State) ---
+        let state = {
+            teamA: { name: '隊伍 A', score: 0 },
+            teamB: { name: '隊伍 B', score: 0 },
+            currentServerNo: 1,
+            servingTeam: null, // 'A' or 'B'
+            timeLeft: 15 * 60,
+            isActive: false,
+            isGameOver: false,
+        };
+
+        let timerInterval = null;
+
+        // --- 初始化 ---
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            renderUI();
+        });
+
+        // --- 邏輯功能 ---
+
+        function updateTeamName(team, newName) {
+            if (team === 'A') state.teamA.name = newName;
+            else state.teamB.name = newName;
+            
+            // 同步更新顯示的名稱 (例如比賽結果畫面)
+            document.getElementById(`indicator-${team}`).textContent = newName;
+            renderUI(); // 為了更新中間發球指示器的名字
+        }
+
+        function setInitialServer(team) {
+            state.servingTeam = team;
+            renderUI();
+        }
+
+        function adjustScore(team, delta) {
+            if (state.isGameOver) return;
+            if (team === 'A') {
+                state.teamA.score = Math.max(0, state.teamA.score + delta);
+            } else {
+                state.teamB.score = Math.max(0, state.teamB.score + delta);
+            }
+            renderUI();
+        }
+
+        function scorePoint(scoringTeam) {
+            if (state.isGameOver) return;
+
+            // 1. 得分
+            if (scoringTeam === 'A') state.teamA.score++;
+            else state.teamB.score++;
+
+            // 2. 換發邏輯
+            if (state.servingTeam === null) {
+                // 如果還沒選發球方，強制選得分方為發球方（邊界情況）
+                state.servingTeam = scoringTeam;
+            } else if (state.servingTeam === 'A') {
+                state.servingTeam = 'B';
+            } else if (state.servingTeam === 'B') {
+                state.servingTeam = 'A';
+                state.currentServerNo = (state.currentServerNo % 6) + 1;
+            }
+
+            renderUI();
+        }
+
+        function adjustServerNo(delta) {
+            if (state.isGameOver) return;
+            let next = state.currentServerNo + delta;
+            if (next > 6) next = 1;
+            if (next < 1) next = 6;
+            state.currentServerNo = next;
+            renderUI();
+        }
+
+        // --- 計時器邏輯 ---
+
+        function toggleTimer() {
+            if (state.isGameOver) return;
+            state.isActive = !state.isActive;
+            
+            if (state.isActive) {
+                timerInterval = setInterval(() => {
+                    if (state.timeLeft > 0) {
+                        state.timeLeft--;
+                        renderTimer();
+                    } else {
+                        endMatch();
+                    }
+                }, 1000);
+            } else {
+                clearInterval(timerInterval);
+            }
+            renderUI();
+        }
+
+        function resetTimer() {
+            state.timeLeft = 15 * 60;
+            state.isActive = false;
+            clearInterval(timerInterval);
+            renderUI();
+        }
+
+        function endMatch() {
+            state.isActive = false;
+            state.isGameOver = true;
+            clearInterval(timerInterval);
+            renderUI();
+            
+            // 延遲一點顯示結果，讓 UI 先變灰
+            setTimeout(() => {
+                toggleModal('game-over-modal', true);
+                renderGameOver();
+            }, 100);
+        }
+
+        function performReset() {
+            state.teamA.score = 0;
+            state.teamB.score = 0;
+            state.servingTeam = null;
+            state.currentServerNo = 1;
+            state.timeLeft = 15 * 60;
+            state.isActive = false;
+            state.isGameOver = false;
+            clearInterval(timerInterval);
+            
+            // 重置名稱輸入框 (Optional: 如果不想重置名字，註解掉下面兩行)
+            state.teamA.name = '隊伍 A';
+            state.teamB.name = '隊伍 B';
+            document.getElementById('teamA-name').value = '隊伍 A';
+            document.getElementById('teamB-name').value = '隊伍 B';
+
+            toggleModal('reset-confirm-modal', false);
+            toggleModal('game-over-modal', false);
+            renderUI();
+        }
+
+        // --- UI 渲染與控制 ---
+
+        function toggleModal(modalId, show) {
+            const modal = document.getElementById(modalId);
+            if (show) modal.classList.remove('hidden');
+            else modal.classList.add('hidden');
+        }
+
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function renderTimer() {
+            const display = document.getElementById('timer-display');
+            const card = document.getElementById('timer-card');
+            const warning = document.getElementById('warning-msg');
+
+            display.textContent = formatTime(state.timeLeft);
+
+            const isLast5 = state.timeLeft <= 5 * 60 && state.timeLeft > 0;
+            
+            // 樣式更新
+            if (state.isGameOver) {
+                display.className = 'text-6xl md:text-8xl font-mono font-bold leading-none text-slate-500 tracking-tight no-select';
+                card.className = 'bg-slate-800 rounded-3xl p-6 shadow-xl border-t-4 transition-all border-slate-700 flex flex-col justify-center min-h-[160px]';
+            } else if (isLast5) {
+                display.className = 'text-6xl md:text-8xl font-mono font-bold leading-none text-red-400 tracking-tight no-select';
+                card.className = 'bg-slate-800 rounded-3xl p-6 shadow-xl border-t-4 transition-all border-red-500 animate-pulse flex flex-col justify-center min-h-[160px]';
+                warning.classList.remove('hidden');
+            } else {
+                display.className = 'text-6xl md:text-8xl font-mono font-bold leading-none text-blue-400 tracking-tight no-select';
+                card.className = 'bg-slate-800 rounded-3xl p-6 shadow-xl border-t-4 transition-all border-blue-500 flex flex-col justify-center min-h-[160px]';
+                warning.classList.add('hidden');
+            }
+        }
+
+        function renderGameOver() {
+            document.getElementById('result-teamA-name').textContent = state.teamA.name;
+            document.getElementById('result-teamA-score').textContent = state.teamA.score;
+            document.getElementById('result-teamB-name').textContent = state.teamB.name;
+            document.getElementById('result-teamB-score').textContent = state.teamB.score;
+
+            const winnerText = document.getElementById('result-winner-text');
+            if (state.teamA.score > state.teamB.score) {
+                winnerText.innerHTML = `<span class="text-pink-500">${state.teamA.name} <br/> 獲勝！</span>`;
+            } else if (state.teamB.score > state.teamA.score) {
+                winnerText.innerHTML = `<span class="text-sky-500">${state.teamB.name} <br/> 獲勝！</span>`;
+            } else {
+                winnerText.innerHTML = `<span class="text-amber-500">雙方平手</span>`;
+            }
+        }
+
+        function renderUI() {
+            // 分數
+            document.getElementById('teamA-score').textContent = state.teamA.score;
+            document.getElementById('teamB-score').textContent = state.teamB.score;
+
+            // 卡片樣式 (Active Server Highlight)
+            const cardA = document.getElementById('teamA-card');
+            const cardB = document.getElementById('teamB-card');
+            const statusA = document.getElementById('teamA-status');
+            const statusB = document.getElementById('teamB-status');
+            
+            // 基礎樣式 - 增加 flex 佈局
+            const baseCardClass = "lg:col-span-4 bg-slate-800 rounded-3xl p-4 md:p-6 border-b-8 transition-all duration-500 flex flex-col justify-between h-full shadow-lg";
+            
+            if (state.servingTeam === 'A') {
+                cardA.className = `${baseCardClass} border-pink-500 ring-4 ring-pink-500/20 shadow-2xl scale-[1.02] z-10`;
+                statusA.className = "p-3 md:p-4 rounded-2xl text-center transition-all bg-pink-500 text-white font-bold shadow-lg text-lg";
+                statusA.textContent = `發球員：${state.currentServerNo} 號`;
+                
+                cardB.className = `${baseCardClass} border-slate-700 opacity-60`;
+                statusB.className = "p-3 md:p-4 rounded-2xl text-center transition-all bg-slate-900/50 text-slate-500 text-lg font-medium";
+                statusB.textContent = "接球方";
+            } else if (state.servingTeam === 'B') {
+                cardB.className = `${baseCardClass} border-sky-500 ring-4 ring-sky-500/20 shadow-2xl scale-[1.02] z-10`;
+                statusB.className = "p-3 md:p-4 rounded-2xl text-center transition-all bg-sky-500 text-white font-bold shadow-lg text-lg";
+                statusB.textContent = `發球員：${state.currentServerNo} 號`;
+
+                cardA.className = `${baseCardClass} border-slate-700 opacity-60`;
+                statusA.className = "p-3 md:p-4 rounded-2xl text-center transition-all bg-slate-900/50 text-slate-500 text-lg font-medium";
+                statusA.textContent = "接球方";
+            } else {
+                cardA.className = `${baseCardClass} border-slate-700 opacity-60`;
+                cardB.className = `${baseCardClass} border-slate-700 opacity-60`;
+                statusA.textContent = "待定";
+                statusB.textContent = "待定";
+            }
+
+            // 中間發球控制區
+            const selectUI = document.getElementById('server-select-ui');
+            const infoUI = document.getElementById('server-info-ui');
+            
+            if (state.servingTeam) {
+                selectUI.classList.add('hidden');
+                infoUI.classList.remove('hidden');
+                document.getElementById('server-number').textContent = state.currentServerNo;
+                
+                // 指示器高亮
+                const indA = document.getElementById('indicator-A');
+                const indB = document.getElementById('indicator-B');
+                
+                indA.textContent = state.teamA.name;
+                indB.textContent = state.teamB.name;
+
+                if (state.servingTeam === 'A') {
+                    indA.className = "text-lg md:text-xl font-black px-4 py-2 rounded-xl transition-colors bg-pink-600 text-white truncate max-w-[120px] md:max-w-none";
+                    indB.className = "text-lg md:text-xl font-black px-4 py-2 rounded-xl transition-colors bg-slate-700 text-slate-500 truncate max-w-[120px] md:max-w-none";
+                } else {
+                    indB.className = "text-lg md:text-xl font-black px-4 py-2 rounded-xl transition-colors bg-sky-600 text-white truncate max-w-[120px] md:max-w-none";
+                    indA.className = "text-lg md:text-xl font-black px-4 py-2 rounded-xl transition-colors bg-slate-700 text-slate-500 truncate max-w-[120px] md:max-w-none";
+                }
+            } else {
+                selectUI.classList.remove('hidden');
+                infoUI.classList.add('hidden');
+            }
+
+            // 計時按鈕狀態
+            const playBtn = document.getElementById('btn-play-pause');
+            const timerControls = document.getElementById('timer-controls');
+            
+            if (!state.isGameOver) {
+                timerControls.classList.remove('hidden');
+                if (state.isActive) {
+                    playBtn.className = "p-4 md:p-5 rounded-full shadow-lg active:scale-90 transition transform bg-amber-500 rotate-180 text-white";
+                    playBtn.innerHTML = '<i data-lucide="pause" class="fill-white w-8 h-8 md:w-10 md:h-10"></i>';
+                } else {
+                    playBtn.className = "p-4 md:p-5 rounded-full shadow-lg active:scale-90 transition transform bg-emerald-600 hover:bg-emerald-500 text-white";
+                    playBtn.innerHTML = '<i data-lucide="play" class="ml-1 fill-white w-8 h-8 md:w-10 md:h-10"></i>';
+                }
+            } else {
+                timerControls.classList.add('hidden');
+            }
+            lucide.createIcons(); // 更新圖示
+
+            // 遊戲結束按鈕狀態
+            const activeBtns = document.getElementById('game-active-btns');
+            const newGameBtn = document.getElementById('new-game-btn');
+            
+            if (state.isGameOver) {
+                activeBtns.classList.add('hidden');
+                newGameBtn.classList.remove('hidden');
+                
+                // 禁用輸入與得分按鈕
+                document.getElementById('teamA-name').disabled = true;
+                document.getElementById('teamB-name').disabled = true;
+                document.getElementById('btn-score-A').disabled = true;
+                document.getElementById('btn-score-B').disabled = true;
+            } else {
+                activeBtns.classList.remove('hidden');
+                newGameBtn.classList.add('hidden');
+                
+                document.getElementById('teamA-name').disabled = false;
+                document.getElementById('teamB-name').disabled = false;
+                document.getElementById('btn-score-A').disabled = false;
+                document.getElementById('btn-score-B').disabled = false;
+            }
+
+            // 更新時間顯示
+            renderTimer();
+        }
+
+    </script>
+</body>
+</html>
