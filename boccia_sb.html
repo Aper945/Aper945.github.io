@@ -319,6 +319,7 @@
             isTieBreak: false, // 是否為決勝局模式
             tieBreakCount: 0,  // 決勝局計數 (Tie-Break 1, 2...)
             tieBreakStarter: null, // 決勝局誰先發球
+            tieBreakWinner: null, // 決勝局獲勝者 (若有)
             red: { score: 0, timeLeft: 120, ballsPlayed: 0, timerStarts: 0, penaltyBalls: 0 },
             blue: { score: 0, timeLeft: 120, ballsPlayed: 0, timerStarts: 0, penaltyBalls: 0 },
             activeSide: null,
@@ -394,8 +395,39 @@
         }
 
         function adjustScore(side, delta) {
-            state[side].score = Math.max(0, state[side].score + delta);
-            document.getElementById(`${side}-score`).textContent = state[side].score;
+            // 如果是決勝局，且獲得分數，記錄勝利者但不增加總分 (或者可以增加到一個 tieBreakScore 變數中，但需求是不加到正規分)
+            // 需求：決勝局得分 -> 該方獲勝，但總分不變
+            if (state.isTieBreak) {
+                if (delta > 0) {
+                    state.tieBreakWinner = side;
+                    // 決勝局只要有人得分，該局/比賽即結束 (因為是 sudden death 嗎？或是比完該局分數高者勝？規則通常是打完該局比分)
+                    // 但需求說：「當延長加局有一方得分，該方即獲勝」
+                    // 若規則是「只要得分就贏」(Golden Point)，那這裡可以這樣做。
+                    // 但地板滾球決勝局通常是打完一局。
+                    // 假設是打完一局後結算。這裡我們先記錄誰在決勝局得分了。
+                    // 為了 UI 顯示，我們暫時不改變主分數 red.score / blue.score
+                    // 而是用一個臨時變數或直接記錄勝者
+                    // 但為了操作者看得到這局拿了幾分，可能還是需要顯示出來？
+                    // 需求說：「比數仍是顯示5:5紅隊獲勝」
+                    // 所以我們用一個 hidden score for tie break?
+                    // 或者我們依然加分到 UI 上，但在比賽結束判定時扣掉？
+                    // 比較好的做法：完全不加到 state.red.score，只記錄 tieBreakWinner
+                    // 但這樣操作者按了加分沒反應會很奇怪。
+                    
+                    // 調整：在決勝局，我們允許操作者「看」到加分嗎？
+                    // 需求說：「比數仍是顯示 5:5」。
+                    // 那我們就不動 state[side].score。
+                    // 但為了讓操作者知道有記到分，我們可以彈出提示或在某處顯示 TieBreak Score。
+                    // 這裡簡化處理：既然不加總分，我們就只記錄 tieBreakWinner。
+                    // 為了避免混淆，我們或許可以在「分數」旁邊顯示一個小小的 "+1 (TB)"?
+                    // 但為了嚴格遵守需求「比數仍是顯示5:5」，我們就不動大數字。
+                    
+                    alert((side === 'red' ? '紅隊' : '藍隊') + " 在決勝局得分！(不計入總分)");
+                }
+            } else {
+                state[side].score = Math.max(0, state[side].score + delta);
+                document.getElementById(`${side}-score`).textContent = state[side].score;
+            }
         }
 
         // --- 罰球設定與執行邏輯 ---
@@ -416,6 +448,7 @@
                 } else {
                     // 檢查是否是最後一局結束
                     let isMatchOver = false;
+                    
                     if (!state.isTieBreak) {
                         // 正規賽結束檢查
                         if (state.currentEnd >= state.totalEnds) {
@@ -433,12 +466,14 @@
                         }
                     } else {
                         // 決勝局結束檢查
-                        if (state.red.score === state.blue.score) {
-                            // 還是平手，繼續 Tie Break
+                        // 檢查決勝局是否有勝者 (tieBreakWinner)
+                        if (state.tieBreakWinner) {
+                            isMatchOver = true;
+                        } else {
+                            // 還是沒人得分/平手，繼續 Tie Break
                             startBreak(null, true);
                             return;
                         }
-                        isMatchOver = true;
                     }
 
                     if (isMatchOver) {
@@ -492,7 +527,21 @@
         }
 
         function penaltyScore() {
-            if (penaltyState.currentTeam) adjustScore(penaltyState.currentTeam, 1);
+            // 罰球得分是計入總分的 (規則 16.5: 罰球得分計入該局分數)
+            // 但需求提到「延長加賽局所得分數並不會加到正規局數的得分當中」
+            // 這裡指的是 Tie-Break 的一般投擲得分。
+            // 罰球通常發生在 Tie-Break 結束後嗎？
+            // 規則上 Tie-Break 也是一局，也會有罰球。
+            // 如果 Tie-Break 有罰球得分，是否計入？
+            // 根據需求「比數仍是顯示 5:5」，暗示 Tie-Break 的任何得分（含罰球）都不加到總分。
+            // 所以我們統一處理：如果是 Tie-Break，分數記在 tieBreakWinner 判斷，不加總分。
+            
+            if (state.isTieBreak) {
+                state.tieBreakWinner = penaltyState.currentTeam;
+                alert((penaltyState.currentTeam === 'red' ? '紅隊' : '藍隊') + " 在決勝局罰球得分！");
+            } else {
+                if (penaltyState.currentTeam) adjustScore(penaltyState.currentTeam, 1);
+            }
         }
 
         function nextPenaltyShot() {
@@ -506,7 +555,26 @@
                     setupPenaltyShot('blue');
                 } else {
                     toggleModal('penalty-modal', false);
-                    if (state.currentEnd < state.totalEnds) startBreak(state.currentEnd + 1); else endMatch();
+                    // 罰球結束後重新檢查狀態
+                    if (!state.isTieBreak) {
+                        if (state.currentEnd >= state.totalEnds) {
+                            if (state.red.score === state.blue.score) {
+                                startBreak(null, true);
+                            } else {
+                                endMatch();
+                            }
+                        } else {
+                            startBreak(state.currentEnd + 1);
+                        }
+                    } else {
+                        // 決勝局罰球結束
+                        if (state.tieBreakWinner) {
+                            endMatch();
+                        } else {
+                            // 還是平手，繼續 Tie Break
+                            startBreak(null, true);
+                        }
+                    }
                 }
             }
         }
@@ -599,7 +667,6 @@
             if (!state.isTieBreak) {
                 state.currentEnd++;
             }
-            // 如果是 Tie Break，currentEnd 不增加，因為它是額外局，但我們會用 UI 顯示區別
             
             resetCurrentEnd(true);
         }
@@ -624,6 +691,7 @@
             state.isTieBreak = false;
             state.tieBreakCount = 0;
             state.tieBreakStarter = null;
+            state.tieBreakWinner = null;
 
             if (isWarmUpOnly) { state.isWarmUp = true; state.timePerEnd = 120; } else { state.isWarmUp = true; state.timePerEnd = 120; }
             let modeText = mode;
@@ -663,6 +731,7 @@
             state.isTieBreak = false;
             state.tieBreakCount = 0;
             state.tieBreakStarter = null;
+            state.tieBreakWinner = null;
 
             const timeToSet = 120;
             state.red.timeLeft = timeToSet; state.blue.timeLeft = timeToSet;
@@ -677,9 +746,22 @@
             document.getElementById('final-red-score').textContent = state.red.score;
             document.getElementById('final-blue-score').textContent = state.blue.score;
             let winnerText = "";
-            if (state.red.score > state.blue.score) winnerText = `<span class="text-pink-500">紅隊獲勝！</span>`;
-            else if (state.blue.score > state.red.score) winnerText = `<span class="text-sky-500">藍隊獲勝！</span>`;
-            else winnerText = `<span class="text-amber-500">平局 (Tie Break)</span>`;
+            
+            // 勝負判定邏輯
+            if (state.isTieBreak && state.tieBreakWinner) {
+                // 決勝局分出勝負
+                if (state.tieBreakWinner === 'red') {
+                    winnerText = `<span class="text-pink-500">紅隊獲勝！ <span class="text-sm">(決勝局獲勝)</span></span>`;
+                } else {
+                    winnerText = `<span class="text-sky-500">藍隊獲勝！ <span class="text-sm">(決勝局獲勝)</span></span>`;
+                }
+            } else {
+                // 正規賽勝負
+                if (state.red.score > state.blue.score) winnerText = `<span class="text-pink-500">紅隊獲勝！</span>`;
+                else if (state.blue.score > state.red.score) winnerText = `<span class="text-sky-500">藍隊獲勝！</span>`;
+                else winnerText = `<span class="text-amber-500">平局 (Tie Break)</span>`; // 理論上這裡不該出現平局，因為會進 TB
+            }
+            
             document.getElementById('winner-text').innerHTML = winnerText;
             toggleModal('game-over-modal', true);
         }
