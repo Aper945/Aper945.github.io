@@ -76,10 +76,16 @@
 
                 <div class="flex items-center justify-between w-full px-2">
                     <div class="flex gap-2 p-2 bg-slate-900/30 rounded-xl" id="red-balls-container"></div>
-                    <div class="flex items-center gap-2 bg-red-900/20 px-2 py-1 rounded border border-red-900/30">
-                        <span class="text-[10px] text-red-300">罰球</span>
-                        <span id="red-penalty-count" class="text-red-400 font-bold text-sm">0</span>
-                        <button onclick="addPenaltyBall('red')" class="bg-red-800 text-white rounded w-5 h-5 flex items-center justify-center text-xs hover:bg-red-700">+</button>
+                    
+                    <!-- 罰球計數器 -->
+                    <div class="flex flex-col items-end">
+                        <div class="text-[10px] text-red-300/70 mb-1">獲判罰球</div>
+                        <div class="flex items-center gap-2 bg-red-900/20 px-2 py-1 rounded border border-red-900/30">
+                            <!-- 修正：增加減少按鈕，並綁定正確函式 -->
+                            <button onclick="adjustPenaltyBalls('red', -1)" class="text-red-400 hover:text-white px-2 font-bold text-lg">-</button>
+                            <span id="red-penalty-count" class="text-red-400 font-bold text-lg w-4 text-center">0</span>
+                            <button onclick="adjustPenaltyBalls('red', 1)" class="bg-red-800 text-white rounded w-6 h-6 flex items-center justify-center text-sm hover:bg-red-700 font-bold">+</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -142,10 +148,16 @@
 
                 <div class="flex items-center justify-between w-full px-2">
                     <div class="flex gap-2 p-2 bg-slate-900/30 rounded-xl" id="blue-balls-container"></div>
-                    <div class="flex items-center gap-2 bg-sky-900/20 px-2 py-1 rounded border border-sky-900/30">
-                        <span class="text-[10px] text-sky-300">罰球</span>
-                        <span id="blue-penalty-count" class="text-sky-400 font-bold text-sm">0</span>
-                        <button onclick="addPenaltyBall('blue')" class="bg-sky-800 text-white rounded w-5 h-5 flex items-center justify-center text-xs hover:bg-sky-700">+</button>
+                    
+                    <!-- 罰球計數器 -->
+                    <div class="flex flex-col items-end">
+                        <div class="text-[10px] text-sky-300/70 mb-1">獲判罰球</div>
+                        <div class="flex items-center gap-2 bg-sky-900/20 px-2 py-1 rounded border border-sky-900/30">
+                            <!-- 修正：增加減少按鈕，並綁定正確函式 -->
+                            <button onclick="adjustPenaltyBalls('blue', -1)" class="text-sky-400 hover:text-white px-2 font-bold text-lg">-</button>
+                            <span id="blue-penalty-count" class="text-sky-400 font-bold text-lg w-4 text-center">0</span>
+                            <button onclick="adjustPenaltyBalls('blue', 1)" class="bg-sky-800 text-white rounded w-6 h-6 flex items-center justify-center text-sm hover:bg-sky-700 font-bold">+</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -203,10 +215,20 @@
         <div class="bg-slate-800 border-2 border-amber-500/50 p-8 rounded-3xl max-w-md w-full text-center shadow-2xl relative overflow-hidden">
             <div class="absolute top-0 left-0 w-full h-3 bg-gradient-to-r from-amber-600 to-yellow-400"></div>
             <h3 class="text-3xl font-bold mb-2 text-amber-500 mt-4">局間休息 (Break)</h3>
-            <p class="text-slate-400 text-base mb-8">準備進行第 <span id="next-end-number" class="text-white font-bold text-xl">1</span> 局</p>
+            <p class="text-slate-400 text-base mb-8">準備進行 <span id="next-end-desc" class="text-white font-bold text-xl">第 2 局</span></p>
+            
+            <!-- Tie-Break 設定區 (只在進入 Tie-Break 時顯示) -->
+            <div id="tie-break-setup" class="hidden mb-6 p-4 bg-slate-700/50 rounded-xl border border-slate-600">
+                <p class="text-slate-300 text-sm mb-3 font-bold">誰先擲目標球？(擲銅板決定)</p>
+                <div class="flex gap-4 justify-center">
+                    <button onclick="setTieBreakStarter('red')" id="tb-btn-red" class="flex-1 py-3 bg-slate-800 border border-red-500/50 text-red-400 rounded-lg hover:bg-red-900/50 transition">紅隊先發</button>
+                    <button onclick="setTieBreakStarter('blue')" id="tb-btn-blue" class="flex-1 py-3 bg-slate-800 border border-sky-500/50 text-sky-400 rounded-lg hover:bg-sky-900/50 transition">藍隊先發</button>
+                </div>
+            </div>
+
             <div class="text-9xl font-black text-white mb-10 font-mono tabular-nums" id="break-timer-display">60</div>
             <button onclick="skipBreak()" class="w-full py-5 bg-slate-700 hover:bg-slate-600 text-white rounded-2xl font-bold text-2xl transition flex items-center justify-center gap-3 shadow-lg">
-                <i data-lucide="skip-forward"></i> 跳過 / 開始下一局
+                <i data-lucide="skip-forward"></i> 跳過 / 開始
             </button>
         </div>
     </div>
@@ -279,6 +301,7 @@
             <div class="space-y-4 text-slate-300 text-sm">
                 <div class="bg-slate-900/50 p-4 rounded-xl"><h3 class="font-bold text-white mb-2">罰球 (Penalty)</h3><p>在紅/藍隊伍區點擊「+」記錄獲得的罰球數量。當正規時間結束點擊「下一局」時，若有未執行的罰球，系統會自動進入罰球執行模式 (每球 1 分鐘)。</p></div>
                 <div class="bg-slate-900/50 p-4 rounded-xl"><h3 class="font-bold text-white mb-2">特殊暫停</h3><p>點擊上方「設定」按鈕，在選單最下方可啟動 10 分鐘的醫療或技術暫停。</p></div>
+                <div class="bg-slate-900/50 p-4 rounded-xl"><h3 class="font-bold text-white mb-2">決勝局 (Tie-Break)</h3><p>若正規賽結束比分相同，系統會自動進入決勝局模式，直到分出勝負。</p></div>
             </div>
         </div>
     </div>
@@ -293,6 +316,9 @@
             currentEnd: 1,
             isWarmUp: true,
             warmUpType: 'simultaneous',
+            isTieBreak: false, // 是否為決勝局模式
+            tieBreakCount: 0,  // 決勝局計數 (Tie-Break 1, 2...)
+            tieBreakStarter: null, // 決勝局誰先發球
             red: { score: 0, timeLeft: 120, ballsPlayed: 0, timerStarts: 0, penaltyBalls: 0 },
             blue: { score: 0, timeLeft: 120, ballsPlayed: 0, timerStarts: 0, penaltyBalls: 0 },
             activeSide: null,
@@ -342,8 +368,19 @@
 
         function updateBallsFromTimer(side) {
             if (state.isWarmUp) return;
-            const isOddEnd = state.currentEnd % 2 !== 0;
-            const jackOwner = isOddEnd ? 'red' : 'blue';
+            
+            // 決定誰發目標球
+            let jackOwner = 'red'; // 預設紅
+            
+            if (state.isTieBreak) {
+                // 決勝局：依據手動設定
+                jackOwner = state.tieBreakStarter || 'red'; // 若未設定預設紅
+            } else {
+                // 正規局：奇數局紅發，偶數局藍發
+                const isOddEnd = state.currentEnd % 2 !== 0;
+                jackOwner = isOddEnd ? 'red' : 'blue';
+            }
+            
             let ballsToMark = side === jackOwner ? state[side].timerStarts - 1 : state[side].timerStarts;
             ballsToMark = Math.max(0, Math.min(6, ballsToMark));
             state[side].ballsPlayed = ballsToMark;
@@ -373,12 +410,40 @@
                 state.currentEnd = 1;
                 resetCurrentEnd(false);
             } else {
+                // 優先檢查是否有罰球需要執行
                 if (state.red.penaltyBalls > 0 || state.blue.penaltyBalls > 0) {
                     startPenaltyPhase();
-                } else if (state.currentEnd < state.totalEnds) {
-                    startBreak(state.currentEnd + 1);
                 } else {
-                    endMatch();
+                    // 檢查是否是最後一局結束
+                    let isMatchOver = false;
+                    if (!state.isTieBreak) {
+                        // 正規賽結束檢查
+                        if (state.currentEnd >= state.totalEnds) {
+                            // 檢查平手
+                            if (state.red.score === state.blue.score) {
+                                // 進入決勝局準備
+                                startBreak(null, true); // true indicates tie break prep
+                                return;
+                            }
+                            isMatchOver = true;
+                        } else {
+                            // 還有下一局正規賽
+                            startBreak(state.currentEnd + 1);
+                            return;
+                        }
+                    } else {
+                        // 決勝局結束檢查
+                        if (state.red.score === state.blue.score) {
+                            // 還是平手，繼續 Tie Break
+                            startBreak(null, true);
+                            return;
+                        }
+                        isMatchOver = true;
+                    }
+
+                    if (isMatchOver) {
+                        endMatch();
+                    }
                 }
             }
         }
@@ -466,10 +531,27 @@
         }
 
         // --- 局間休息邏輯 ---
-        function startBreak(nextEndNum) {
+        function startBreak(nextEndNum, isTieBreakPrep = false) {
             pauseGame();
-            document.getElementById('next-end-number').textContent = nextEndNum;
             toggleModal('break-modal', true);
+            
+            const desc = document.getElementById('next-end-desc');
+            const tbSetup = document.getElementById('tie-break-setup');
+            
+            if (isTieBreakPrep) {
+                // 準備進入決勝局
+                state.tieBreakCount++;
+                desc.innerHTML = `<span class="text-amber-400">平手！進入決勝局 (Tie Break ${state.tieBreakCount})</span>`;
+                tbSetup.classList.remove('hidden');
+                state.isTieBreak = true; // 標記接下來是決勝局
+                state.tieBreakStarter = null; // 重置，等待選擇
+                updateTieBreakBtns();
+            } else {
+                // 正常下一局
+                desc.innerHTML = `準備進行 <span class="text-white font-bold text-xl">第 ${nextEndNum} 局</span>`;
+                tbSetup.classList.add('hidden');
+            }
+
             let timeLeft = 60; const display = document.getElementById('break-timer-display');
             display.textContent = timeLeft; display.classList.remove('text-red-500'); 
             if (breakInterval) clearInterval(breakInterval);
@@ -480,10 +562,46 @@
             }, 1000);
         }
         
+        function setTieBreakStarter(side) {
+            state.tieBreakStarter = side;
+            updateTieBreakBtns();
+        }
+        
+        function updateTieBreakBtns() {
+            const redBtn = document.getElementById('tb-btn-red');
+            const blueBtn = document.getElementById('tb-btn-blue');
+            
+            if (state.tieBreakStarter === 'red') {
+                redBtn.classList.replace('bg-slate-800', 'bg-red-600');
+                redBtn.classList.add('text-white');
+                blueBtn.classList.replace('bg-sky-600', 'bg-slate-800');
+                blueBtn.classList.remove('text-white');
+            } else if (state.tieBreakStarter === 'blue') {
+                blueBtn.classList.replace('bg-slate-800', 'bg-sky-600');
+                blueBtn.classList.add('text-white');
+                redBtn.classList.replace('bg-red-600', 'bg-slate-800');
+                redBtn.classList.remove('text-white');
+            } else {
+                redBtn.classList.replace('bg-red-600', 'bg-slate-800');
+                blueBtn.classList.replace('bg-sky-600', 'bg-slate-800');
+            }
+        }
+        
         function skipBreak() {
+            if (state.isTieBreak && !state.tieBreakStarter) {
+                alert("請先選擇決勝局由哪一方發目標球！");
+                return;
+            }
+            
             if (breakInterval) clearInterval(breakInterval);
             toggleModal('break-modal', false);
-            state.currentEnd++; resetCurrentEnd(true);
+            
+            if (!state.isTieBreak) {
+                state.currentEnd++;
+            }
+            // 如果是 Tie Break，currentEnd 不增加，因為它是額外局，但我們會用 UI 顯示區別
+            
+            resetCurrentEnd(true);
         }
 
         // --- 通用/重置功能 ---
@@ -501,6 +619,12 @@
                 case 'WarmUpOnly': time = 120; ends = 1; isWarmUpOnly = true; warmUpType = 'simultaneous'; break;
             }
             state.matchTimePerEnd = time; state.totalEnds = ends; state.warmUpType = warmUpType; state.currentEnd = 1;
+            
+            // 重置決勝局相關
+            state.isTieBreak = false;
+            state.tieBreakCount = 0;
+            state.tieBreakStarter = null;
+
             if (isWarmUpOnly) { state.isWarmUp = true; state.timePerEnd = 120; } else { state.isWarmUp = true; state.timePerEnd = 120; }
             let modeText = mode;
             if (mode === 'PairBC3') modeText = "BC3 雙人"; if (mode === 'PairBC4') modeText = "BC4 雙人"; if (mode === 'Team') modeText = "團體賽"; if (mode === 'WarmUpOnly') modeText = "僅暖身";
@@ -511,11 +635,14 @@
 
         function resetCurrentEnd(keepScore = true) {
             clearInterval(state.timerInterval); state.activeSide = null;
+            
+            // 決勝局時間與正規局相同
             const timeToSet = state.isWarmUp ? 120 : state.matchTimePerEnd;
             state.red.timeLeft = timeToSet; state.blue.timeLeft = timeToSet;
             state.red.ballsPlayed = 0; state.blue.ballsPlayed = 0; state.red.timerStarts = 0; state.blue.timerStarts = 0;
             state.red.penaltyBalls = 0; state.blue.penaltyBalls = 0; 
             document.getElementById('red-penalty-count').textContent = 0; document.getElementById('blue-penalty-count').textContent = 0;
+
             if (!keepScore) { state.red.score = 0; state.blue.score = 0; }
             updateDisplay(); renderBalls('red'); renderBalls('blue'); toggleModal('reset-modal', false);
         }
@@ -523,8 +650,20 @@
         function resetMatch(keepSettings = false) {
             clearInterval(state.timerInterval); state.activeSide = null;
             if (state.gameType !== 'WarmUpOnly') state.isWarmUp = true;
-            state.currentEnd = 1; state.red.score = 0; state.blue.score = 0;
+            state.currentEnd = 1; 
+            
+            // 這裡確保比分歸零
+            state.red.score = 0; 
+            state.blue.score = 0;
+            document.getElementById('red-score').textContent = 0;
+            document.getElementById('blue-score').textContent = 0;
+
             state.red.penaltyBalls = 0; state.blue.penaltyBalls = 0;
+            
+            state.isTieBreak = false;
+            state.tieBreakCount = 0;
+            state.tieBreakStarter = null;
+
             const timeToSet = 120;
             state.red.timeLeft = timeToSet; state.blue.timeLeft = timeToSet;
             state.red.ballsPlayed = 0; state.blue.ballsPlayed = 0;
@@ -577,6 +716,24 @@
                 nextBtnText.textContent = "開始比賽 (Start)";
                 nextBtn.className = "py-3 md:py-4 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-500 transition shadow-lg flex items-center justify-center gap-2 text-sm md:text-base";
                 jackEl.textContent = "暖身時間"; jackEl.className = "bg-slate-700 text-slate-300 px-4 py-2 rounded-lg font-bold text-sm";
+            } else if (state.isTieBreak) {
+                centerText.textContent = `TB ${state.tieBreakCount}`;
+                centerText.className = "text-amber-400 text-4xl lg:text-6xl mx-1 font-black";
+                subText.innerHTML = "決勝局 (Tie Break)";
+                nextBtnText.textContent = "下一局 / 結束";
+                nextBtn.className = "py-3 md:py-4 bg-amber-600 text-white rounded-xl font-bold hover:bg-amber-500 transition shadow-lg flex items-center justify-center gap-2 text-sm md:text-base";
+                
+                // 更新決勝局誰發球
+                if (state.tieBreakStarter === 'red') {
+                    jackEl.textContent = "紅方發球 (Jack)";
+                    jackEl.className = "bg-red-900/50 text-red-200 border border-red-800 text-slate-300 px-4 py-2 rounded-lg font-bold text-sm";
+                } else if (state.tieBreakStarter === 'blue') {
+                    jackEl.textContent = "藍方發球 (Jack)";
+                    jackEl.className = "bg-sky-900/50 text-sky-200 border border-sky-800 text-slate-300 px-4 py-2 rounded-lg font-bold text-sm";
+                } else {
+                    jackEl.textContent = "待定";
+                    jackEl.className = "bg-slate-700 text-slate-300 px-4 py-2 rounded-lg font-bold text-sm";
+                }
             } else {
                 centerText.textContent = state.currentEnd; centerText.className = "text-white text-4xl lg:text-6xl mx-1 font-black";
                 subText.innerHTML = `共 <span id="center-total-ends">${state.totalEnds}</span> 局`;
